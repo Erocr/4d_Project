@@ -1,7 +1,7 @@
 from math import *
 
 
-def equation(x1, y1, x2, y2) -> tuple[float, float, float]:
+def equation(x1, y1, x2, y2) -> tuple:
     a = y2 - y1
     b = x1 - x2
     c = -x1 * y2 + x1 * y1 + y1 * x2 - y1 * x1
@@ -12,7 +12,7 @@ def sigmoid(x: float):
     return 1/(1+e**(-x))
 
 
-def moy(x: tuple[float, ...]):
+def moy(x: tuple):
     res = 0
     if len(x) == 0: return 0
     for elt in x:
@@ -58,9 +58,25 @@ def complete_inter(x1, y1, x2, y2, obs):
         return True
 
 
-def intersection_point(px, py, ang, x1, y1, x2, y2) -> tuple[float, float] or bool:
+def in_triangle(ax, ay, bx, by, cx, cy, mx, my):
+  det = bx*cy-ay*bx-ax*cy-by*cx+by*ax+ay*cx
+  if det == 0: return False
+  t1 = (cy*mx-cy*ax-ay*mx+ax*my-cx*my+cx*ay)/det
+  t2 = (ay*mx-by*mx+by*ax+bx*my-bx*ay-ax*my)/det
+  return t1 > 0 and t2 > 0 and t1+t2 < 1
+
+
+def intersection_point(px, py, ang, x1, y1, x2, y2) -> tuple or bool:
     vx, vy = rotate(0, 1, ang)
     x1, y1, x2, y2, x3, y3, x4, y4 = px, py, px+vx*3000, py+vy*3000, x1, y1, x2, y2
+    t = ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4)) / (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))+0.0000000001)
+    u = ((x1-x3)*(y1-y2)-(y1-y3)*(x1-x2)) / (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))+0.0000000001)
+    if 0 <= t <= 1 and 0 <= u <= 1:
+        return x1 + t*(x2-x1), y1 + t*(y2-y1)
+    return False
+
+
+def inter_segment(x1, y1, x2, y2, x3, y3, x4, y4):
     t = ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4)) / (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))+0.0000000001)
     u = ((x1-x3)*(y1-y2)-(y1-y3)*(x1-x2)) / (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))+0.0000000001)
     if 0 <= t <= 1 and 0 <= u <= 1:
@@ -76,7 +92,7 @@ def intersection(x1, y1, x2, y2, x3, y3, x4, y4):
     return int(x), int(y)
 
 
-def rotate(vx: float, vy: float, alpha: float) -> tuple[float, float]:
+def rotate(vx: float, vy: float, alpha: float) -> tuple:
     alpha = -radians(alpha)
     return cos(alpha) * vx - sin(alpha) * vy, sin(alpha) * vx + cos(alpha) * vy
 
@@ -131,13 +147,13 @@ def dist3(obj1, obj2):
         return 0
 
 
-def normal_3d(v1, v2) -> tuple[float, float, float]:
+def normal_3d(v1, v2) -> tuple:
     return (v1[1]*v2[2]-v1[2]*v2[1],
             v1[2]*v2[0]-v1[0]*v2[2],
             v1[0]*v2[1]-v1[1]*v2[0])
 
 
-def normal_p_3d(p1, p2, p3) -> tuple[float, float, float]:
+def normal_p_3d(p1, p2, p3) -> tuple:
     v1 = (p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2])
     v2 = (p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2])
     return normal_3d(v1, v2)

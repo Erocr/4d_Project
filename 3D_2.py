@@ -6,7 +6,7 @@ black = (0, 0, 0)
 
 
 class Model4d:
-    def __init__(self, faces, w_pos: tuple[float, float], vertices1=None, vertices2=None, functions=None, color=white):
+    def __init__(self, faces, w_pos: tuple, vertices1=None, vertices2=None, functions=None, color=white):
         # assert functions is not None and vertices2 is not None, "Il faut soit des fonctions pour les sommets soit " \
         #                                                        "les sommets de fin"
         self.faces = faces
@@ -24,7 +24,7 @@ class Model4d:
                 self.functions.append(self.vertex_function(vertices1[i], w_pos[0], vertices2[i], w_pos[1]))
 
     @staticmethod
-    def vertex_function(ver1: tuple[float, float, float], w1: float, ver2, w2):
+    def vertex_function(ver1: tuple, w1: float, ver2, w2):
         dw = (w1 - w2)
         mx = (ver1[0] - ver2[0]) / dw
         my = (-ver1[1] + ver2[1]) / dw
@@ -46,7 +46,7 @@ class Model4d:
         for i in range(len(self.faces)):
             faces.append((self.faces[i][0] + v_start, self.faces[i][1] + v_start, self.faces[i][2] + v_start))
         return self.vertices, faces
-    
+
     def get_xbox(self, w):
         self.vertices = []
         max_x = max_y = max_z = -100000
@@ -107,8 +107,8 @@ class Camera:
 
 class Controller:
     def __init__(self):
-        self.screen_size = (1350, 700)
-        self.screen = pg.display.set_mode(self.screen_size)  # , pg.FULLSCREEN)
+        self.screen_size = (1280, 660)
+        self.screen = pg.display.set_mode(self.screen_size) #, pg.FULLSCREEN)
         self.objects_v_pos = []
         self.objects = []
         pg.mouse.set_visible(False)
@@ -122,12 +122,17 @@ class Controller:
         points2 = [(0, 0, 0), (1, 0, 0), (0.5, 1, 0.5), (0.5, 1, 0.5), (0, 0, 1), (1, 0, 1), (0.5, 1, 0.5),
                    (0.5, 1, 0.5)]
         points3 = [(0, 0, 0), (10, 0, 0), (0, 10, 0), (10, 10, 0), (0, 0, 10), (10, 0, 10), (0, 10, 10), (10, 10, 10)]
+        rads = pi/1
+        functions1 = [(lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 0), (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 0), \
+        (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 0), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 0), \
+        (lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 1), (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 1), \
+        (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 1), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 1)]
         ws = (-5, 5)
         faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(faces, ws, points1, points2))
+        self.objects.append(Model4d(faces, ws, functions=functions1))
 
-    def projection(self, cam: Camera) -> list[list[float]]:
+    def projection(self, cam: Camera) -> list:
         cam.update()
         projected = []
         for vert in self.vertices:
@@ -149,7 +154,7 @@ class Controller:
             v = [self.aspect_ratio * cam.factor * v[0] / v[2],
                  cam.factor * v[1] / v[2],
                  v[2] * cam.q - cam.q * cam.znear]
-            if factor < -0.5 and abs(v[0]) < 2:
+            if factor < -0.4 and abs(v[0]) < 2:
                 if v[0] == 0:
                     signe_x = 1
                 else:
@@ -259,9 +264,15 @@ class Controller:
         res_faces = []
         t = []
         f = []
-        axes = [[], [], []]
+        p = []
+        #axes = [[], [], []]
+        axes = ((0, 0, 0, self.screen_size[1]),
+                (self.screen_size[0], 0, self.screen_size[0], self.screen_size[1]),
+                (0, 0, self.screen_size[0], 0),
+                (0, self.screen_size[1], self.screen_size[0], self.screen_size[1]))
         if not points: return []
         for i in range(3):
+            """
             if points[i][0] < 0:
                 axes[i] += [(0, 0, 0, self.screen_size[1])]
             if points[i][0] > self.screen_size[0]:
@@ -270,11 +281,32 @@ class Controller:
                 axes[i] += [(0, 0, self.screen_size[0], 0)]
             if points[i][1] > self.screen_size[1]:
                 axes[i] += [(0, self.screen_size[1], self.screen_size[0], self.screen_size[1])]
+                """
             if 0 <= points[i][0] <= self.screen_size[0] and 0 <= points[i][1] <= self.screen_size[1]:
                 t.append(i)
+                p.append(points[i])
             else:
                 f.append(i)
         nb_in_screen = len(t)
+        if nb_in_screen == 3: return (p,)
+        for i in range(0, 2):
+            for j in range(1+i, 3):
+                for k in axes:
+                    temp = inter_segment(points[i][0], points[i][1], points[j][0], points[j][1],
+                                 k[0], k[1], k[2], k[3])
+                    if bool(temp):
+                        p.append(temp)
+        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, 0):
+            p.append((0, 0))
+        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], 0):
+            p.append((self.screen_size[0], 0))
+        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, self.screen_size[1]):
+            p.append((0, self.screen_size[1]))
+        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], self.screen_size[1]):
+            p.append((self.screen_size[0], self.screen_size[1]))
+        if len(p) >= 3:
+          return self.splitting_polygon(p)
+        return []
         if nb_in_screen == 1:
             p = []
             common_axis = None
@@ -345,7 +377,7 @@ class Controller:
         for i in range(len(self.faces)):
             face = self.faces[i]
             normal = normalise(normal_p_3d(projected[face[1]], projected[face[0]], projected[face[2]]))
-            if normal[2] > 0:
+            if normal[2] < 0:
                 points = []
                 for o in range(len(face)):
                     points.append((int((projected[face[o]][0] + 1) * self.screen_size[0] / 2),
@@ -381,16 +413,20 @@ class Controller:
             distances.pop(i)
         for face in sorted_faces:
             points, luminosity, obj = face
-            if points == []:
-                pass
             for elt in self.splitting_triangle(points):
                 color = obj.get_color()
                 pg.draw.polygon(self.screen, (color[0]*luminosity, color[1]*luminosity, color[2]*luminosity), elt)
                 pg.draw.line(self.screen, white, elt[0], elt[1])
                 pg.draw.line(self.screen, white, elt[1], elt[2])
                 pg.draw.line(self.screen, white, elt[0], elt[2])
-        pg.draw.rect(self.screen, (255, 0, 0), pg.Rect(self.screen_size[0]/2-200, 50, 400, 20))
-        pg.draw.rect(self.screen, (255, 255, 0), pg.Rect(self.screen_size[0]/2+camera.w*20-5, 40, 10, 40))
+        half_screen = self.screen_size[0]/2
+        pg.draw.rect(self.screen, (0, 0, 0), pg.Rect(half_screen-402, 28, 804, 9))
+        pg.draw.rect(self.screen, (0, 0, 0), pg.Rect(half_screen-403, 23, 6, 19))
+        pg.draw.rect(self.screen, (0, 0, 0), pg.Rect(half_screen+398, 23, 6, 19))
+        pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen-400, 30, 800, 5))
+        pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen-401, 25, 2, 15))
+        pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen+400, 25, 2, 15))
+        pg.draw.rect(self.screen, (255, 255, 0), pg.Rect(half_screen+camera.w*40-2, 18, 4, 29))
         pg.display.flip()
 
 
