@@ -6,7 +6,7 @@ black = (0, 0, 0)
 
 
 class Model4d:
-    def __init__(self, faces, w_pos: tuple, vertices1=None, vertices2=None, functions=None, color=white):
+    def __init__(self, faces, w_pos: tuple, vertices1=None, vertices2=None, functions=None, color=white, rh=None, rv=None):
         # assert functions is not None and vertices2 is not None, "Il faut soit des fonctions pour les sommets soit " \
         #                                                        "les sommets de fin"
         self.faces = faces
@@ -22,6 +22,10 @@ class Model4d:
             self.functions = []
             for i in range(len(vertices1)):
                 self.functions.append(self.vertex_function(vertices1[i], w_pos[0], vertices2[i], w_pos[1]))
+        elif vertices1 is not None and rh is not None and rv is not None:
+            self.functions = []
+            for i in range(len(vertices1)):
+                self.functions.append(self.rotating_function(vertices1[i], rh, rv))
 
     @staticmethod
     def vertex_function(ver1: tuple, w1: float, ver2, w2):
@@ -36,6 +40,15 @@ class Model4d:
         if mz == 0 or w1 == 0: pz = ver1[2]
         else: pz = ver1[2] - mz * w1
         return lambda w: mx * w + px, lambda w: my * w + py, lambda w: mz * w + pz
+
+    @staticmethod
+    def rotating_function(ver1: tuple, speedh, speedv):
+        rh = speedh*pi/10
+        rv = 0 #speedv*pi/10
+        d, theta, phi = cart_to_pol(*ver1)
+        return lambda w: d * sin(theta-w*rv) * cos(phi+w*rh),\
+        lambda w: d * cos(theta-w*rv),\
+        lambda w: d * sin(theta-w*rv) * sin(phi+w*rh)
 
     def get_elements(self, v_start, w):
         self.vert_start = v_start
@@ -113,6 +126,7 @@ class Controller:
         self.objects = []
         pg.mouse.set_visible(False)
         pg.event.set_grab(True)
+        self.debug = 0
         self.screen_size = pg.display.get_surface().get_size()
         self.aspect_ratio = self.screen_size[1] / self.screen_size[0]
         self.light_dir = normalise((1, 1, 0))
@@ -130,7 +144,7 @@ class Controller:
         ws = (-5, 5)
         faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(faces, ws, functions=functions1))
+        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=10, rv=0, color=(255,0,255)))
 
     def projection(self, cam: Camera) -> list:
         cam.update()
@@ -288,22 +302,25 @@ class Controller:
             else:
                 f.append(i)
         nb_in_screen = len(t)
+        s = False
         if nb_in_screen == 3: return (p,)
         for i in range(0, 2):
-            for j in range(1+i, 3):
+            for j in range(2, i, -1):
                 for k in axes:
                     temp = inter_segment(points[i][0], points[i][1], points[j][0], points[j][1],
                                  k[0], k[1], k[2], k[3])
                     if bool(temp):
                         p.append(temp)
-        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, 0):
-            p.append((0, 0))
-        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], 0):
-            p.append((self.screen_size[0], 0))
-        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, self.screen_size[1]):
-            p.append((0, self.screen_size[1]))
-        if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], self.screen_size[1]):
-            p.append((self.screen_size[0], self.screen_size[1]))
+                        if not s:
+                            if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, 0):
+                                p.append((0, 0))
+                            if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], 0):
+                                p.append((self.screen_size[0], 0))
+                            if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], 0, self.screen_size[1]):
+                                p.append((0, self.screen_size[1]))
+                            if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], self.screen_size[1]):
+                                p.append((self.screen_size[0], self.screen_size[1]))
+                            s = True
         if len(p) >= 3:
           return self.splitting_polygon(p)
         return []
@@ -366,6 +383,11 @@ class Controller:
             self.faces += f
             self.objects_v_pos.append(len(self.faces))
 
+    def set_debug(self):
+        self.debug += 1
+        if self.debug > 2:
+            self.debug = 0
+
     def draw(self):
         self.objects_elements(camera)
         projected = self.projection(camera)
@@ -415,10 +437,12 @@ class Controller:
             points, luminosity, obj = face
             for elt in self.splitting_triangle(points):
                 color = obj.get_color()
-                pg.draw.polygon(self.screen, (color[0]*luminosity, color[1]*luminosity, color[2]*luminosity), elt)
-                pg.draw.line(self.screen, white, elt[0], elt[1])
-                pg.draw.line(self.screen, white, elt[1], elt[2])
-                pg.draw.line(self.screen, white, elt[0], elt[2])
+                if self.debug <= 1:
+                    pg.draw.polygon(self.screen, (color[0]*luminosity, color[1]*luminosity, color[2]*luminosity), elt)
+                if self.debug >= 1:
+                    pg.draw.line(self.screen, white, elt[0], elt[1])
+                    pg.draw.line(self.screen, white, elt[1], elt[2])
+                    pg.draw.line(self.screen, white, elt[0], elt[2])
         half_screen = self.screen_size[0]/2
         pg.draw.rect(self.screen, (0, 0, 0), pg.Rect(half_screen-402, 28, 804, 9))
         pg.draw.rect(self.screen, (0, 0, 0), pg.Rect(half_screen-403, 23, 6, 19))
@@ -472,6 +496,8 @@ while end:
                 pu = False
             elif event.key == pg.K_PAGEDOWN:
                 pd = False
+            elif event.key == pg.K_F3:
+                controller.set_debug()
         elif event.type == pg.MOUSEMOTION:
             camera.angle_x -= event.rel[1] / 100
             camera.angle_y -= event.rel[0] / 100

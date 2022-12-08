@@ -1,5 +1,18 @@
 from math import *
 
+def cart_to_pol(x, y, z):
+  d = sqrt(x**2+y**2+z**2)
+  if d == 0: return 0, 0, atan2(z, x)
+  theta = acos(y/d) #angle vertical partant de y vers le bas en radians
+  phi = atan2(z, x) #angle horizontal partant de x vers z
+  return d, theta, phi
+
+def pol_to_cart(d, theta, phi):
+  x = d * sin(theta) * cos(phi)
+  y = d * cos(theta)
+  z = d * sin(theta) * sin(phi)
+  return x, y, z
+
 
 def equation(x1, y1, x2, y2) -> tuple:
     a = y2 - y1
