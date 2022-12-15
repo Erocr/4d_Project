@@ -85,7 +85,7 @@ class Camera:
         self.y = 0.5
         self.z = -5
         self.w = 0
-        self.radius = 0.3
+        self.radius = 0.5
         self.fov = 90  # fov ist for "field of controller"
         self.factor = 1 / tan(radians(self.fov) / 2)
         self.znear = 0.1
@@ -94,28 +94,22 @@ class Camera:
         self.angle_z = 0
         self.angle_y = 0
         self.angle_x = 0
-        self.dir_x = 0, 0, 1
         self.dir_y = 0, 0, 1
 
     def update(self):
-        if self.angle_x > 0.5854:
-            self.angle_x = 0.5854
-        elif self.angle_x < -0.5854:
-            self.angle_x = -0.5854
-        v2 = (0, 0, 1)
-        # Rotation in X-axis
-        v2 = (v2[0],
-              v2[1] * cos(-self.angle_x) + v2[2] * sin(-self.angle_x),
-              -v2[1] * sin(-self.angle_x) + v2[2] * cos(-self.angle_x),)
+        if self.angle_x > 1.1708:
+            self.angle_x = 1.1708
+        elif self.angle_x < -1.1708:
+            self.angle_x = -1.1708
         v = (0, 0, 1)
+        # Rotation in X-axis
+        v = (v[0],
+             v[1] * cos(-self.angle_x) + v[2] * sin(-self.angle_x),
+             -v[1] * sin(-self.angle_x) + v[2] * cos(-self.angle_x),)
         v = (v[0] * cos(-self.angle_y) + v[2] * sin(-self.angle_y),
              v[1],
              -v[0] * sin(-self.angle_y) + v[2] * cos(-self.angle_y))
-        v2 = (v2[0] * cos(-self.angle_y) + v2[2] * sin(-self.angle_y),
-              v2[1],
-              -v2[0] * sin(-self.angle_y) + v2[2] * cos(-self.angle_y))
-        self.dir_x = v
-        self.dir_y = v2
+        self.dir_y = v
 
 
 class Controller:
@@ -129,7 +123,7 @@ class Controller:
         self.debug = 0
         self.screen_size = pg.display.get_surface().get_size()
         self.aspect_ratio = self.screen_size[1] / self.screen_size[0]
-        self.light_dir = normalise((1, 1, 0))
+        self.light_dir = normalise((-1, -1, 0))
         self.vertices = []
         self.faces = []
         points1 = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0), (0, 0, 1), (1, 0, 1), (0, 1, 1), (1, 1, 1)]
@@ -138,20 +132,19 @@ class Controller:
         points3 = [(0, 0, 0), (10, 0, 0), (0, 10, 0), (10, 10, 0), (0, 0, 10), (10, 0, 10), (0, 10, 10), (10, 10, 10)]
         rads = pi/1
         functions1 = [(lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 0), (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 0), \
-        (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 0), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 0), \
-        (lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 1), (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 1), \
-        (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 1), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 1)]
+                      (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 0), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 0), \
+                      (lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 1), (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 1), \
+                      (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 1), (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 1)]
         ws = (-5, 5)
         faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=10, rv=0, color=(255,0,255)))
+        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=10, rv=0, color=(85, 0, 155)))
 
     def projection(self, cam: Camera) -> list:
         cam.update()
         projected = []
         for vert in self.vertices:
             v = (vert[0] - cam.x, vert[1] - cam.y, vert[2] - cam.z + 0.0001)
-            factor = dot_product(normalise(v), cam.dir_x)
             factor_y = dot_product(normalise(v), cam.dir_y)
             # Rotation in y-axis
             v = (v[0] * cos(cam.angle_y) + v[2] * sin(cam.angle_y),
@@ -168,13 +161,7 @@ class Controller:
             v = [self.aspect_ratio * cam.factor * v[0] / v[2],
                  cam.factor * v[1] / v[2],
                  v[2] * cam.q - cam.q * cam.znear]
-            if factor < -0.4 and abs(v[0]) < 2:
-                if v[0] == 0:
-                    signe_x = 1
-                else:
-                    signe_x = v[0] / abs(v[0])
-                v = [v[0] - 4 * signe_x, v[1], v[2]]
-            if factor_y < -0.5 and abs(v[1]) < 2:
+            if factor_y < 0 and abs(v[1]) < 2:
                 if v[1] == 0:
                     signe_y = 1
                 else:
@@ -303,12 +290,12 @@ class Controller:
                 f.append(i)
         nb_in_screen = len(t)
         s = False
-        if nb_in_screen == 3: return (p,)
-        for i in range(0, 2):
-            for j in range(2, i, -1):
+        if nb_in_screen == 3: return p,
+        for i in t[::-1]:
+            for j in f:
                 for k in axes:
                     temp = inter_segment(points[i][0], points[i][1], points[j][0], points[j][1],
-                                 k[0], k[1], k[2], k[3])
+                                         k[0], k[1], k[2], k[3])
                     if bool(temp):
                         p.append(temp)
                         if not s:
@@ -321,8 +308,17 @@ class Controller:
                             if in_triangle(points[0][0], points[0][1], points[1][0], points[1][1], points[2][0], points[2][1], self.screen_size[0], self.screen_size[1]):
                                 p.append((self.screen_size[0], self.screen_size[1]))
                             s = True
+                            if len(f) == 2:
+                                for k2 in axes:
+                                    temp = inter_segment(points[f[0]][0], points[f[0]][1], points[f[1]][0],
+                                                         points[f[1]][1],
+                                                         k2[0], k2[1], k2[2], k2[3])
+                                    if bool(temp):
+                                        p.append(temp)
+        if nb_in_screen == 0: pass
+        p = points
         if len(p) >= 3:
-          return self.splitting_polygon(p)
+            return self.splitting_polygon(p)
         return []
         if nb_in_screen == 1:
             p = []
@@ -457,7 +453,7 @@ class Controller:
 controller = Controller()
 camera = Camera()
 end = True
-speed = 1
+speed = 0.3
 right = left = up = down = pu = pd = False
 clicks = (False, False, False)
 while end:
@@ -466,42 +462,42 @@ while end:
         if event.type == pg.QUIT:
             end = False
         elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_RIGHT:
+            if event.key == pg.K_RIGHT or event.key == pg.K_d:
                 right = True
-            elif event.key == pg.K_LEFT:
+            elif event.key == pg.K_LEFT or event.key == pg.K_q or event.key == pg.K_a:
                 left = True
-            elif event.key == pg.K_UP:
+            elif event.key == pg.K_UP or event.key == pg.K_z or event.key == pg.K_w:
                 up = True
-            elif event.key == pg.K_DOWN:
+            elif event.key == pg.K_DOWN or event.key == pg.K_s:
                 down = True
-            elif event.key == pg.K_PAGEUP:
+            elif event.key == pg.K_PAGEUP or event.key == pg.K_SPACE:
                 pu = True
-            elif event.key == pg.K_PAGEDOWN:
+            elif event.key == pg.K_PAGEDOWN or event.key == pg.K_LSHIFT:
                 pd = True
             elif event.key == pg.K_ESCAPE:
                 pg.mouse.set_visible(True)
                 pg.event.set_grab(False)
         elif event.type == pg.KEYUP:
-            if event.key == pg.K_RIGHT:
+            if event.key == pg.K_RIGHT or event.key == pg.K_d:
                 right = False
-            elif event.key == pg.K_LEFT:
+            elif event.key == pg.K_LEFT or event.key == pg.K_q or event.key == pg.K_a:
                 left = False
-            elif event.key == pg.K_UP:
+            elif event.key == pg.K_UP or event.key == pg.K_z or event.key == pg.K_w:
                 up = False
-            elif event.key == pg.K_DOWN:
+            elif event.key == pg.K_DOWN or event.key == pg.K_s:
                 down = False
-            elif event.key == pg.K_SPACE:
-                space = False
-            elif event.key == pg.K_PAGEUP:
+            elif event.key == pg.K_PAGEUP or event.key == pg.K_SPACE:
                 pu = False
-            elif event.key == pg.K_PAGEDOWN:
+            elif event.key == pg.K_PAGEDOWN or event.key == pg.K_LSHIFT:
                 pd = False
             elif event.key == pg.K_F3:
                 controller.set_debug()
-        elif event.type == pg.MOUSEMOTION:
+        elif event.type == pg.MOUSEMOTION and pg.event.get_grab():
             camera.angle_x -= event.rel[1] / 100
             camera.angle_y -= event.rel[0] / 100
     if clicks[0]:
+        if pg.mouse.get_visible(): pg.mouse.set_visible(False)
+        if not pg.event.get_grab(): pg.event.set_grab(True)
         camera.w -= 0.01*speed
         if camera.w < -10: camera.w = -10
     if clicks[1]:
