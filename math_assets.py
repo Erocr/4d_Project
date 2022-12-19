@@ -1,17 +1,19 @@
 from math import *
 
+
 def cart_to_pol(x, y, z):
-  d = sqrt(x**2+y**2+z**2)
-  if d == 0: return 0, 0, atan2(z, x)
-  theta = acos(y/d) #angle vertical partant de y vers le bas en radians
-  phi = atan2(z, x) #angle horizontal partant de x vers z
-  return d, theta, phi
+    d = sqrt(x**2+y**2+z**2)
+    if d == 0: return 0, 0, atan2(z, x)
+    theta = acos(y/d)  # angle vertical partant de y vers le bas en radians
+    phi = atan2(z, x)  # angle horizontal partant de x vers z
+    return d, theta, phi
+
 
 def pol_to_cart(d, theta, phi):
-  x = d * sin(theta) * cos(phi)
-  y = d * cos(theta)
-  z = d * sin(theta) * sin(phi)
-  return x, y, z
+    x = d * sin(theta) * cos(phi)
+    y = d * cos(theta)
+    z = d * sin(theta) * sin(phi)
+    return x, y, z
 
 
 def equation(x1, y1, x2, y2) -> tuple:
@@ -31,6 +33,17 @@ def moy(x: tuple):
     for elt in x:
         res += elt
     return res/len(x)
+
+
+def plane_line_inter(plane_points, plane_normal, line_start, line_end):
+    plane_normal = normalise(plane_normal)
+    plane_d = -dot_product(plane_normal, plane_points)
+    ad = dot_product(line_start, plane_normal)
+    bd = dot_product(line_end, plane_normal)
+    t = (-plane_d - ad) / (bd - ad)
+    line_vector = (line_end[0]-line_start[0], line_end[1]-line_start[1], line_end[2]-line_start[2])
+    line_vector = (line_vector[0]*t, line_vector[1]*t, line_vector[2]*t)
+    return line_start[0]+line_vector[0], line_start[1]+line_vector[1], line_start[2]+line_vector[2]
 
 
 def inter(line, obs):
