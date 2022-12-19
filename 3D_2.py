@@ -36,6 +36,42 @@ class Model4d:
                 vert = vertices1[i][0] + position[0], vertices1[i][1] + position[1], vertices1[i][2] + position[2]
                 self.functions.append(self.static_function(vert))
 
+    def fromobj(filename: str, wpos: tuple, position=(0,0,0), rh=None):
+        print(f"reading {filename}")
+        file = open(filename, "r")
+        line = file.readline()
+        while line[0] != "v":
+            line = file.readline()
+        points = []
+        while line[0:2] == "v ":
+            vertex = line.replace("\n","").split(" ")
+            points.append((float(vertex[-3]), float(vertex[-2]), float(vertex[-1])))
+            line = file.readline()
+        while line[0] != "f":
+            line = file.readline()
+        faces = []
+        while line != "" and line[0] == "f":
+            faceline = line.replace("\n","").replace("f ","")
+            vertices = faceline.split(" ")
+            if len(vertices) == 3:
+                faces.append((int(vertices[0].split("/")[0])-1,
+                        int(vertices[1].split("/")[0])-1,
+                        int(vertices[2].split("/")[0])-1))
+            elif len(vertices) == 4 and vertices[0] != "":
+                faces.append((int(vertices[0].split("/")[0])-1,
+                        int(vertices[1].split("/")[0])-1,
+                        int(vertices[3].split("/")[0])-1))
+                faces.append((int(vertices[1].split("/")[0])-1,
+                        int(vertices[2].split("/")[0])-1,
+                        int(vertices[3].split("/")[0])-1))
+            line = file.readline()
+        print(points)
+        print(faces)
+        file.close()
+        print("Done")
+        if rh is None: return Model4d(faces, wpos, vertices1=points, vertices2=points, position=position)
+        else: return Model4d(faces, wpos, vertices1=points, rh=rh, rv=0, position=position)
+
     @staticmethod
     def vertex_function(ver1: tuple, w1: float, ver2, w2):
         dw = (w1 - w2)
@@ -105,7 +141,7 @@ class Camera:
         self.fov = 90  # fov ist for "field of controller"
         self.factor = 1 / tan(radians(self.fov) / 2)
         self.z_near = 0.3
-        self.z_far = 50
+        self.z_far = 100
         self.q = self.z_far / (self.z_far - self.z_near)
         self.angle_z = 0
         self.angle_y = 0
@@ -167,6 +203,7 @@ class Controller:
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
         self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))
+        self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
 
     def projection(self, vert, cam: Camera) -> list:
         cam.update()
@@ -219,8 +256,8 @@ class Controller:
                 cam.z += vcz
         return up_collision
 
-    @staticmethod
-    def import_element(file, position=(0, 0, 0), color=(255, 255, 255)):
+    def import_element(self, file, position=(0, 0, 0), color=(255, 255, 255)):
+        print(f"Reading {file}")
         f = open(file, "r")
         line = f.readline()
         vertices = []
@@ -277,7 +314,8 @@ class Controller:
                 faces.append(f4)
             line = f.readline()
         f.close()
-        # self.objects.append(Model4d(vertices, faces, (0, 10), color=color))
+        print("Done")
+        self.objects.append(Model4d(faces, (0, 10), vertices1=vertices, vertices2=vertices, color=color))
 
     @staticmethod
     def splitting_polygon(face):
@@ -457,9 +495,10 @@ class Controller:
 
 
 controller = Controller()
+#controller.import_element("E.obj")
 camera = Camera()
 end = True
-speed = 1
+speed = 10
 exist_gravity = False
 force_y = 0
 right = left = up = down = pu = pd = False
