@@ -395,12 +395,6 @@ class Controller:
         right_fov = (direction[0] * cos(-fov/3) + direction[2] * sin(-fov/3),
                      direction[1],
                      -direction[0] * sin(-fov/3) + direction[2] * cos(-fov/3))
-        #right_fov = (0 * cos(-camera.angle_y) + right_fov[2] * sin(-camera.angle_y),
-        #             right_fov[1],
-        #             -right_fov[0] * sin(-camera.angle_y) + right_fov[2] * cos(-camera.angle_y))
-        #right_fov = (right_fov[0],
-        #             right_fov[1] * cos(-camera.angle_x) + right_fov[2] * sin(-camera.angle_x),
-        #             -right_fov[1] * sin(-camera.angle_x) + right_fov[2] * cos(-self.angle_x),)
         up_fov = (0,
                   sin(-camera.angle_x+fov/1.8),
                   cos(-camera.angle_x+fov/1.8),)
@@ -489,8 +483,11 @@ class Controller:
         pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen+400, 25, 2, 15))
         pg.draw.rect(self.screen, (255, 255, 0), pg.Rect(half_screen+camera.w*40-2, 18, 4, 29))
         if self.add_infos_ath:
+            clock.tick()
+            fps_hud = self.basic_font.render(str(clock.get_fps()), False, (255, 255, 255))
             player_pos_hud = self.basic_font.render(str((camera.x, camera.y, camera.z)), False, (255, 255, 255))
-            self.screen.blit(player_pos_hud, (0, 0))
+            self.screen.blit(fps_hud, (0, 0))
+            self.screen.blit(player_pos_hud, (0, 40))
         pg.display.flip()
 
 
@@ -504,6 +501,7 @@ force_y = 0
 right = left = up = down = pu = pd = False
 c_up = False
 clicks = (False, False, False)
+clock = pg.time.Clock()
 while end:
     for event in pg.event.get():
         clicks = pg.mouse.get_pressed()
