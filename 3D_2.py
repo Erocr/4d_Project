@@ -54,9 +54,9 @@ class Model4d:
             faceline = line.replace("\n","").replace("f ","")
             vertices = faceline.split(" ")
             if len(vertices) == 3:
-                faces.append((int(vertices[0].split("/")[0])-1,
+                faces.append((int(vertices[2].split("/")[0])-1,
                         int(vertices[1].split("/")[0])-1,
-                        int(vertices[2].split("/")[0])-1))
+                        int(vertices[0].split("/")[0])-1))
             elif len(vertices) == 4 and vertices[0] != "":
                 faces.append((int(vertices[0].split("/")[0])-1,
                         int(vertices[1].split("/")[0])-1,
@@ -203,7 +203,7 @@ class Controller:
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
         self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))
-        self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
+        #self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
 
     def projection(self, vert, cam: Camera) -> list:
         cam.update()
@@ -482,26 +482,29 @@ class Controller:
         pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen-401, 25, 2, 15))
         pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen+400, 25, 2, 15))
         pg.draw.rect(self.screen, (255, 255, 0), pg.Rect(half_screen+camera.w*40-2, 18, 4, 29))
+        clock.tick()
+        fps = clock.get_fps()
         if self.add_infos_ath:
-            clock.tick()
-            fps_hud = self.basic_font.render(str(clock.get_fps()), False, (255, 255, 255))
+            fps_hud = self.basic_font.render(str(fps), False, (255, 255, 255))
             player_pos_hud = self.basic_font.render(str((camera.x, camera.y, camera.z)), False, (255, 255, 255))
             self.screen.blit(fps_hud, (0, 0))
             self.screen.blit(player_pos_hud, (0, 40))
         pg.display.flip()
+        return fps
 
 
 controller = Controller()
 #controller.import_element("E.obj")
 camera = Camera()
 end = True
-speed = 10
+fps_balancing = 1
 exist_gravity = False
 force_y = 0
 right = left = up = down = pu = pd = False
 c_up = False
 clicks = (False, False, False)
 clock = pg.time.Clock()
+clock.tick()
 while end:
     for event in pg.event.get():
         clicks = pg.mouse.get_pressed()
@@ -548,39 +551,41 @@ while end:
     if clicks[0]:
         if pg.mouse.get_visible(): pg.mouse.set_visible(False)
         if not pg.event.get_grab(): pg.event.set_grab(True)
-        camera.w -= 0.01*speed
+        camera.w -= 0.01*fps_balancing
         if camera.w < -10: camera.w = -10
     if clicks[1]:
         pass
     if clicks[2]:
-        camera.w += 0.01*speed
+        camera.w += 0.01*fps_balancing
         if camera.w > 10: camera.w = 10
     if right:
         vx, vy = rotate(1, 0, -degrees(camera.angle_y))
-        camera.x += vx / 100 * speed
-        camera.z += vy / 100 * speed
+        camera.x += vx / 100 * fps_balancing
+        camera.z += vy / 100 * fps_balancing
     if left:
         vx, vy = rotate(-1, 0, -degrees(camera.angle_y))
-        camera.x += vx / 100 * speed
-        camera.z += vy / 100 * speed
+        camera.x += vx / 100 * fps_balancing
+        camera.z += vy / 100 * fps_balancing
     if up:
         vx, vy = rotate(0, 1, -degrees(camera.angle_y))
-        camera.x += vx / 100 * speed
-        camera.z += vy / 100 * speed
+        camera.x += vx / 100 * fps_balancing
+        camera.z += vy / 100 * fps_balancing
     if down:
         vx, vy = rotate(0, -1, -degrees(camera.angle_y))
-        camera.x += vx / 100 * speed
-        camera.z += vy / 100 * speed
+        camera.x += vx / 100 * fps_balancing
+        camera.z += vy / 100 * fps_balancing
     if pu:
         if not exist_gravity:
-            camera.y -= 0.01 * speed
+            camera.y -= 0.01 * fps_balancing
         elif c_up:
-            force_y -= 0.015
+            force_y -= 0.035 * fps_balancing
     if pd:
-        camera.y += 0.01 * speed
+        camera.y += 0.01 * fps_balancing
     if exist_gravity:
         camera.y += force_y
-        force_y += 0.0001
+        force_y += 0.0003 * fps_balancing ** 2
     c_up = controller.collisions(camera)
     if c_up: force_y = 0
-    controller.draw()
+    fps = controller.draw()
+    if fps != 0:
+        fps_balancing = 300/fps
