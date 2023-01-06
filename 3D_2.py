@@ -35,6 +35,7 @@ class Model4d:
             for i in range(len(vertices1)):
                 vert = vertices1[i][0] + position[0], vertices1[i][1] + position[1], vertices1[i][2] + position[2]
                 self.functions.append(self.static_function(vert))
+        self.savefunctions = self.functions.copy()
 
     def fromobj(filename: str, wpos: tuple, position=(0,0,0), rh=None):
         print(f"reading {filename}")
@@ -45,7 +46,7 @@ class Model4d:
         points = []
         while line[0:2] == "v ":
             vertex = line.replace("\n","").split(" ")
-            points.append((float(vertex[-3]), -float(vertex[-2]), float(vertex[-1])))
+            points.append((float(vertex[-3]), -float(vertex[-2]), -float(vertex[-1])))
             line = file.readline()
         while line[0] != "f":
             line = file.readline()
@@ -65,8 +66,6 @@ class Model4d:
                         int(vertices[2].split("/")[0])-1,
                         int(vertices[3].split("/")[0])-1))
             line = file.readline()
-        print(points)
-        print(faces)
         file.close()
         print("Done")
         if rh is None: return Model4d(faces, wpos, vertices1=points, vertices2=points, position=position)
@@ -126,6 +125,18 @@ class Model4d:
                 elif self.vertices[-1][2] < min_z: min_z = self.vertices[-1][2]
         return (min_x, min_y, min_z), (max_x, max_y, max_z)
 
+    def rotatew(self, angle):
+        for i in range(len(self.savefunctions)):
+            elt = self.savefunctions[i]
+            start = (elt[0](self.w_start),elt[1](self.w_start),elt[2](self.w_start),self.w_start)
+            end = (elt[0](self.w_end),elt[1](self.w_end),elt[2](self.w_end),self.w_end)
+            si = sin(angle)
+            co = cos(angle)
+            start = (start[0], start[1], co*start[2]-si*start[3], si*start[2]+co*start[3])
+            end = (end[0], end[1], co*end[2]-si*end[3], si*end[2]+co*end[3])
+            self.functions[i] = self.vertex_function(start[:3],start[3],end[:3],end[3])
+
+
     def get_color(self):
         return self.color
 
@@ -181,10 +192,10 @@ class Controller:
         self.light_dir = normalise((1, 1, 0))
         self.vertices = []
         self.faces = []
-        points1 = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0), (0, 0, 1), (1, 0, 1), (0, 1, 1), (1, 1, 1)]
+        points1 = [(-1, -1, -1), (1, -1, -1), (-1, 1, -1), (1, 1, -1), (-1, -1, 1), (1, -1, 1), (-1, 1, 1), (1, 1, 1)]
         points2 = [(0, 0, 0), (1, 0, 0), (0.5, 1, 0.5), (0.5, 1, 0.5), (0, 0, 1), (1, 0, 1), (0.5, 1, 0.5),
                    (0.5, 1, 0.5)]
-        points3 = [(0, 0, 0), (10, 0, 0), (0, 10, 0), (10, 10, 0), (0, 0, 10), (10, 0, 10), (0, 10, 10), (10, 10, 10)]
+        points3 = [(-10,-10,-10), (10,-10,-10), (-10, 10,-10), (10, 10,-10), (-10,-10, 10), (10,-10, 10), (-10, 10, 10), (10, 10, 10)]
         rads = pi/1
         functions1 = [(lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 0),
                       (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 0),
@@ -197,12 +208,12 @@ class Controller:
         ws = (-5, 5)
         faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=3, rv=0, color=(100, 0, 185), position=(0, 0, 0)))
-        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(2, 0, 2)))
+        self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 0)))
+        '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(2, 0, 2)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
-        self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))
+        self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))'''
         #self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
         '''points1 = [(0, 0, 0), (0.1, 0, 0), (0, 0.1, 0), (0.1, 0.1, 0), (0, 0, 0.1), (0.1, 0, 0.1), (0, 0.1, 0.1), (0.1, 0.1, 0.1)]
         from cubes2 import a
@@ -367,6 +378,7 @@ class Controller:
         self.faces = []
         self.objects_v_pos = []
         for obj in self.objects:
+            obj.rotatew(w_angle)
             v, f = obj.get_elements(len(self.vertices), cam.w)
             self.vertices += v
             self.faces += f
@@ -402,8 +414,8 @@ class Controller:
                      direction[1],
                      -direction[0] * sin(-fov/3) + direction[2] * cos(-fov/3))
         up_fov = (0,
-                  sin(-camera.angle_x+fov/1.8),
-                  cos(-camera.angle_x+fov/1.8),)
+                  sin(-camera.angle_x+fov/2),
+                  cos(-camera.angle_x+fov/2),)
         up_fov = (up_fov[0] * cos(-camera.angle_y) + up_fov[2] * sin(-camera.angle_y),
                   up_fov[1],
                   -up_fov[0] * sin(-camera.angle_y) + up_fov[2] * cos(-camera.angle_y))
@@ -506,6 +518,8 @@ end = True
 fps_balancing = 1
 exist_gravity = False
 force_y = 0
+w_angle = 0
+w_rotation = False
 right = left = up = down = pu = pd = False
 c_up = False
 clicks = (False, False, False)
@@ -534,6 +548,8 @@ while end:
                 pg.event.set_grab(False)
             elif event.key == pg.K_F4:
                 exist_gravity = False if exist_gravity else True
+            elif event.key == pg.K_F6:
+                w_rotation = True
         elif event.type == pg.KEYUP:
             if event.key == pg.K_RIGHT or event.key == pg.K_d:
                 right = False
@@ -551,6 +567,8 @@ while end:
                 controller.set_debug()
             elif event.key == pg.K_F5:
                 controller.set_debug2()
+            elif event.key == pg.K_F6:
+                w_rotation = False
         elif event.type == pg.MOUSEMOTION and pg.event.get_grab():
             camera.angle_x -= event.rel[1] / 100
             camera.angle_y -= event.rel[0] / 100
@@ -564,6 +582,8 @@ while end:
     if clicks[2]:
         camera.w += 0.01*fps_balancing
         if camera.w > 10: camera.w = 10
+    if w_rotation:
+        w_angle += 1.5707963267948966 / 300 * fps_balancing
     if right:
         vx, vy = rotate(1, 0, -degrees(camera.angle_y))
         camera.x += vx / 100 * fps_balancing
