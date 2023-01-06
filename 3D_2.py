@@ -45,7 +45,7 @@ class Model4d:
         points = []
         while line[0:2] == "v ":
             vertex = line.replace("\n","").split(" ")
-            points.append((float(vertex[-3]), float(vertex[-2]), float(vertex[-1])))
+            points.append((float(vertex[-3]), -float(vertex[-2]), float(vertex[-1])))
             line = file.readline()
         while line[0] != "f":
             line = file.readline()
@@ -132,9 +132,9 @@ class Model4d:
 
 class Camera:
     def __init__(self):
-        self.x = 0.5
-        self.y = 0.5
-        self.z = -5
+        self.x = 3.5
+        self.y = -3.5
+        self.z = -3
         self.w = 0
         self.radius_x = 0.4
         self.radius_y = 0.7
@@ -204,6 +204,12 @@ class Controller:
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
         self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))
         #self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
+        '''points1 = [(0, 0, 0), (0.1, 0, 0), (0, 0.1, 0), (0.1, 0.1, 0), (0, 0, 0.1), (0.1, 0, 0.1), (0, 0.1, 0.1), (0.1, 0.1, 0.1)]
+        from cubes2 import a
+        cubesarray = a()
+        for elt in cubesarray:
+            self.objects.append(Model4d(faces, ws, vertices1=points1, color=(elt[3],elt[4],elt[5]), position=(elt[0],elt[1],elt[2])))
+        '''
 
     def projection(self, vert, cam: Camera) -> list:
         cam.update()
