@@ -196,19 +196,23 @@ class Controller:
         points2 = [(0, 0, 0), (1, 0, 0), (0.5, 1, 0.5), (0.5, 1, 0.5), (0, 0, 1), (1, 0, 1), (0.5, 1, 0.5),
                    (0.5, 1, 0.5)]
         points3 = [(-10,-10,-10), (10,-10,-10), (-10, 10,-10), (10, 10,-10), (-10,-10, 10), (10,-10, 10), (-10, 10, 10), (10, 10, 10)]
+        s75 = sqrt(0.75)
+        sjsp = sqrt(1-(0.5*s75)**2)
+        alpha = 0.4*pi
+        off = 0.2*pi #offset
+        ico = [(0, -s75, 0),
+        (sjsp, -0.5*s75, 0), (cos(alpha)*sjsp, -0.5*s75, sin(alpha)*sjsp), (cos(2*alpha)*sjsp, -0.5*s75, sin(2*alpha)*sjsp), (cos(3*alpha)*sjsp, -0.5*s75, sin(3*alpha)*sjsp), (cos(4*alpha)*sjsp, -0.5*s75, sin(4*alpha)*sjsp),
+        (cos(off)*sjsp, 0.5*s75, sin(off)*sjsp), (cos(alpha+off)*sjsp, 0.5*s75, sin(alpha+off)*sjsp), (cos(2*alpha+off)*sjsp, 0.5*s75, sin(2*alpha+off)*sjsp), (cos(3*alpha+off)*sjsp, 0.5*s75, sin(3*alpha+off)*sjsp), (cos(4*alpha+off)*sjsp, 0.5*s75, sin(4*alpha+off)*sjsp),
+        (0, s75, 0)]
+        icofaces = [(0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 4), (0, 1, 5),
+        (1, 2, 6), (2, 7, 6), (2, 3, 7), (3, 8, 7), (3, 4, 8), (4, 9, 8), (4, 5, 9), (5, 10, 9), (5, 1, 10), (1, 6, 10),
+        (6, 7, 11), (7, 8, 11), (8, 9, 11), (9, 10, 11), (10, 6, 11)]
         rads = pi/1
-        functions1 = [(lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 0),
-                      (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 0),
-                      (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 0),
-                      (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 0),
-                      (lambda w: cos(w*rads+pi*0.25), lambda w: sin(w*rads+pi*0.25), lambda w: 1),
-                      (lambda w: cos(w*rads+pi*0.75), lambda w: sin(w*rads+pi*0.75), lambda w: 1),
-                      (lambda w: cos(w*rads+pi*1.75), lambda w: sin(w*rads+pi*1.75), lambda w: 1),
-                      (lambda w: cos(w*rads+pi*1.25), lambda w: sin(w*rads+pi*1.25), lambda w: 1)]
         ws = (-5, 5)
         faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 0)))
+        self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(0, 0, 0)))
+        #self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 0)))
         '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(2, 0, 2)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
