@@ -116,7 +116,7 @@ class Model4d:
         min_x = min_y = min_z = 100000
         if self.w_start < w < self.w_end:
             for fs in self.functions:
-                self.vertices.append((fs[0](w), fs[1](w), fs[2](w)))
+                self.vertices.append((fs[0](w), fs[1](w), fs[2](w))) #c'est là précisément qu'il faudrait faire la rotation
                 if self.vertices[-1][0] > max_x: max_x = self.vertices[-1][0]
                 elif self.vertices[-1][0] < min_x: min_x = self.vertices[-1][0]
                 if self.vertices[-1][1] > max_y: max_y = self.vertices[-1][1]
