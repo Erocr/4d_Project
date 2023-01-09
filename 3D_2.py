@@ -88,7 +88,7 @@ class Model4d:
     @staticmethod
     def rotating_function(ver1: tuple, speed_h, speed_v):
         rh = speed_h*pi/10
-        rv = 0
+        rv = speed_h*pi/10
         d, theta, phi = cart_to_pol(*ver1)
         return (lambda w: d * sin(theta-w*rv) * cos(phi+w*rh),
                 lambda w: d * cos(theta-w*rv),
@@ -213,8 +213,8 @@ class Controller:
                  (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
         self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(0, 0, 0)))
         #self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 0)))
-        '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(2, 0, 2)))
-        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
+        #self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=1, color=(100, 0, 185), position=(2, -1, 2)))
+        '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
         self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))'''
@@ -382,7 +382,7 @@ class Controller:
         self.faces = []
         self.objects_v_pos = []
         for obj in self.objects:
-            obj.rotatew(w_angle)
+            #obj.rotatew(w_angle)
             v, f = obj.get_elements(len(self.vertices), cam.w)
             self.vertices += v
             self.faces += f
