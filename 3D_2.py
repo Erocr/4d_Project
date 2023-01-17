@@ -26,6 +26,7 @@ class Model4d:
                 vert2 = vertices2[i][0] + position[0], vertices2[i][1] + position[1], vertices2[i][2] + position[2]
                 self.functions.append(self.vertex_function(vert1, w_pos[0], vert2, w_pos[1]))
         elif vertices1 is not None and rh is not None and rv is not None:
+            self.faces = [(face[0], face[2], face[1]) for face in self.faces]
             self.functions = []
             for i in range(len(vertices1)):
                 vert1 = vertices1[i][0] + position[0], vertices1[i][1] + position[1], vertices1[i][2] + position[2]
@@ -88,7 +89,7 @@ class Model4d:
     @staticmethod
     def rotating_function(ver1: tuple, speed_h, speed_v):
         rh = speed_h*pi/10
-        rv = speed_h*pi/10
+        rv = speed_v*pi/10
         d, theta, phi = cart_to_pol(*ver1)
         return (lambda w: d * sin(theta-w*rv) * cos(phi+w*rh),
                 lambda w: d * cos(theta-w*rv),
@@ -140,6 +141,50 @@ class Model4d:
     def get_color(self):
         return self.color
 
+class Space:
+    def __init__(self, point):
+        self.point = point
+        self.normal = (0, 0, 0, 1)
+        self.alpha = 0
+
+    def update(self, alpha):
+        self.alpha = alpha
+        self.normal = (-sin(alpha),0,0,cos(alpha))
+
+    def from4d_to_3d(self, points):
+        new_points = ()
+        for point in points:
+            new_points += ((cos(-self.alpha)*point[0]-sin(-self.alpha)*point[3],
+                           point[1],
+                           point[2]),)
+        return new_points
+
+class Line:
+    def __init__(self, point1, point2):
+        self.point1 = point1
+        self.point2 = point2
+        self.vecdir = (point2[0]-point1[0],point2[1]-point1[1],point2[2]-point1[2],point2[3]-point1[3])
+
+    def spaceinter(self, space):
+        denom = self.vecdir[0]*space.normal[0] + self.vecdir[1]*space.normal[1] + self.vecdir[2]*space.normal[2] + self.vecdir[3]*space.normal[3]
+        num = (space.point[0]-self.point1[0])*space.normal[0] + (space.point[1]-self.point1[1])*space.normal[1] + (space.point[2]-self.point1[2])*space.normal[2] + (space.point[3]-self.point1[3])*space.normal[3]
+        if denom != 0 and num != 0:
+            k = num/denom
+            if 0 <= k <= 1:
+                return ((self.point1[0]+self.vecdir[0]*k,self.point1[1]+self.vecdir[1]*k,self.point1[2]+self.vecdir[2]*k,self.point1[3]+self.vecdir[3]*k),)
+        elif denom == num == 0:
+            return (self.point1,self.point2)
+        return ()
+
+class Tetrahedron:
+    def __init__(self, point1, point2, point3, point4):
+        self.lines = (Line(point1, point2), Line(point2, point3), Line(point3, point4), Line(point4, point1), Line(point2, point4), Line(point3, point1))
+
+    def spaceinter(self, space):
+        points = ()
+        for line in self.lines:
+            points += line.spaceinter(space)
+        return points
 
 class Camera:
     def __init__(self):
@@ -195,7 +240,7 @@ class Controller:
         points1 = [(-1, -1, -1), (1, -1, -1), (-1, 1, -1), (1, 1, -1), (-1, -1, 1), (1, -1, 1), (-1, 1, 1), (1, 1, 1)]
         points2 = [(0, 0, 0), (1, 0, 0), (0.5, 1, 0.5), (0.5, 1, 0.5), (0, 0, 1), (1, 0, 1), (0.5, 1, 0.5),
                    (0.5, 1, 0.5)]
-        points3 = [(-10,-10,-10), (10,-10,-10), (-10, 10,-10), (10, 10,-10), (-10,-10, 10), (10,-10, 10), (-10, 10, 10), (10, 10, 10)]
+        points3 = [(elt[0]*5, elt[1]*5, elt[2]*5) for elt in points1]
         s75 = sqrt(0.75)
         sjsp = sqrt(1-(0.5*s75)**2)
         alpha = 0.4*pi
@@ -204,16 +249,16 @@ class Controller:
         (sjsp, -0.5*s75, 0), (cos(alpha)*sjsp, -0.5*s75, sin(alpha)*sjsp), (cos(2*alpha)*sjsp, -0.5*s75, sin(2*alpha)*sjsp), (cos(3*alpha)*sjsp, -0.5*s75, sin(3*alpha)*sjsp), (cos(4*alpha)*sjsp, -0.5*s75, sin(4*alpha)*sjsp),
         (cos(off)*sjsp, 0.5*s75, sin(off)*sjsp), (cos(alpha+off)*sjsp, 0.5*s75, sin(alpha+off)*sjsp), (cos(2*alpha+off)*sjsp, 0.5*s75, sin(2*alpha+off)*sjsp), (cos(3*alpha+off)*sjsp, 0.5*s75, sin(3*alpha+off)*sjsp), (cos(4*alpha+off)*sjsp, 0.5*s75, sin(4*alpha+off)*sjsp),
         (0, s75, 0)]
-        icofaces = [(0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 4), (0, 1, 5),
-        (1, 2, 6), (2, 7, 6), (2, 3, 7), (3, 8, 7), (3, 4, 8), (4, 9, 8), (4, 5, 9), (5, 10, 9), (5, 1, 10), (1, 6, 10),
-        (6, 7, 11), (7, 8, 11), (8, 9, 11), (9, 10, 11), (10, 6, 11)]
+        icofaces = [(0, 1, 2), (0, 2, 3), (0, 3, 4), (0, 4, 5), (0, 5, 1),
+        (1, 6, 2), (2, 6, 7), (2, 7, 3), (3, 7, 8), (3, 8, 4), (4, 8, 9), (4, 9, 5), (5, 9, 10), (5, 10, 1), (1, 10, 6),
+        (6, 11, 7), (7, 11, 8), (8, 11, 9), (9, 11, 10), (10, 11, 6)]
         rads = pi/1
         ws = (-5, 5)
-        faces = [(1, 0, 2), (3, 1, 2), (5, 1, 3), (7, 5, 3), (5, 4, 0), (1, 5, 0), (4, 5, 7), (6, 4, 7),
-                 (0, 4, 6), (2, 0, 6), (3, 2, 6), (7, 3, 6)]
-        self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(0, 0, 0)))
-        #self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 0)))
-        #self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=1, color=(100, 0, 185), position=(2, -1, 2)))
+        faces = [(1, 2, 0), (3, 2, 1), (5, 3, 1), (7, 3, 5), (5, 0, 4), (1, 0, 5), (4, 7, 5), (6, 7, 4),
+                 (0, 6, 4), (2, 6, 0), (3, 6, 2), (7, 6, 3)]
+        self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(5, 0, 0)))
+        self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 10)))
+        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(-1, 0, 0)))
         '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
         self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
