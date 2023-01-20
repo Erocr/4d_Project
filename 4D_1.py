@@ -166,8 +166,13 @@ class Model4d:
 class Model4dv2:
     def __init__(self, points, faces, color=(255, 255, 255)):
         centre = (0, 0, 0, 0)
+        self.mini_map_p1, self.mini_map_p2 = (None, None)
         self.color = color
         for point in points:
+            if self.mini_map_p1 is None or point[3] < self.mini_map_p1[1]:
+                self.mini_map_p1 = (point[0], point[3])
+            if self.mini_map_p2 is None or point[3] > self.mini_map_p1[1]:
+                self.mini_map_p2 = (point[0], point[3])
             centre = (centre[0] + point[0], centre[1] + point[1], centre[2] + point[2], centre[3] + point[3])
         centre = (centre[0] / len(points), centre[1] / len(points), centre[2] / len(points), centre[3] / len(points))
         self.tetrahedrons = ()
@@ -181,7 +186,9 @@ class Model4dv2:
         faces = []
         self.vertices = []
         #tetra2triangles = ((0, 1, 2), (0, 3, 2), (1, 2, 3), (1, 3, 0))
-        tetra2triangles = ((1, 2, 3), )
+        tetra2triangles = ((0, 1, 2), (0, 1, 3), (0, 1, 4), (0, 1, 5), (0, 2, 3), (0, 2, 4), (0, 2, 5), (0, 3, 4),
+                           (0, 3, 5), (0, 4, 5), (1, 2, 3), (1, 2, 4), (1, 2, 5), (1, 3, 4), (1, 3, 5), (1, 4, 5),
+                           (2, 3, 4), (2, 3, 5), (2, 4, 5), (3, 4, 5))
         for tetrahedron in self.tetrahedrons:
             points = tetrahedron.spaceinter(cam.visible_space)
             for t2t in tetra2triangles:
@@ -298,7 +305,7 @@ class Tetrahedron:
 
 class Camera:
     def __init__(self):
-        self.pos = [0, 0, -1, 0.1]
+        self.pos = [0, 0, -1.5, 0.1]
         self.radius_x = 0.4
         self.radius_y = 0.7
         self.fov = 90  # fov ist for "field of controller"
@@ -388,6 +395,8 @@ class Controller:
         #                   (4, 5, 12)]
         # self.objects.append(Model4dv2(hypercube_points, hypercube_faces))
         self.objects.append(Hypercube((0, 0, 0, 0), (1, 1, 1, 1), (255, 255, 255)))
+        self.objects.append(Hypercube((3, 0, 0, 3), (4, 1, 2, 4), (255, 255, 255)))
+        self.objects.append(Hypercube((-2, 0, 3, -1), (-1, 5, 4, 0), (255, 255, 255)))
         # self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(5, 0, 0)))
         # self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 10)))
         # self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(-1, 0, 0)))
@@ -615,7 +624,7 @@ class Controller:
             normal = normalise(normal_p_3d(projected[1], projected[0], projected[2]))
             normal2 = normalise(normal_p_3d(points_temp[0], points_temp[1], points_temp[2]))
             luminosity = (dot_product(normal2, self.light_dir) + 1) / 2
-            if True:  # normal[2] <= 0:
+            if True:  #normal[2] <= 0:
                 triangles = self.splitting(points_temp, near_point, direction)
                 tr_temp = ()
                 for elt in triangles:
@@ -680,7 +689,24 @@ class Controller:
         pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen - 401, 25, 2, 15))
         pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(half_screen + 400, 25, 2, 15))
         pg.draw.rect(self.screen, (255, 255, 0), pg.Rect(half_screen + camera.pos[3] * 40 - 2, 18, 4, 29))
+        #  mini map
         pg.draw.rect(self.screen, (40, 40, 0), pg.Rect(20, 20, 100, 100))
+        for elt in self.objects:
+            x1 = 70 + (elt.mini_map_p1[0] - camera.pos[0]) * 10
+            w1 = 70 + (elt.mini_map_p1[1] - camera.pos[3]) * 10
+            x2 = (elt.mini_map_p2[0]-elt.mini_map_p1[0])*10
+            w2 = (elt.mini_map_p2[1] - elt.mini_map_p1[1]) * 10
+            if x1 <= 20:
+                x2 = max(x2 - 20 + x1, 0)
+                x1 = 20
+            if w1 <= 20:
+                w2 = max(w2 - 20 + w1, 0)
+                w1 = 20
+            if x1+x2 >= 120:
+                x2 = -x1+120
+            if w1+w2 >= 120:
+                w2 = -w1+120
+            pg.draw.rect(self.screen, (180, 180, 180), pg.Rect(x1, w1, x2, w2))
         alpha = camera.visible_space.alpha
         mini_map_vd = (cos(alpha), sin(alpha))
         pg.draw.line(self.screen, (255, 255, 255), (70, 70), (70 + mini_map_vd[0] * 50, 70 + mini_map_vd[1] * 50))
