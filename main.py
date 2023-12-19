@@ -48,6 +48,13 @@ def plane_line_inter(plane_points, plane_normal, line_start, line_end):
     return line_start[0]+line_vector[0], line_start[1]+line_vector[1], line_start[2]+line_vector[2]
 
 
+def add(v1, v2):
+    v = ()
+    for i in range(len(v1)):
+        v += (v1[i]+v2[i],)
+    return v
+
+
 def inter(line, obs):
     a, b, c = line
     if a == 0:
@@ -239,13 +246,14 @@ class Model4dv2:
         centre = (0, 0, 0, 0)
         self.mini_map_p1, self.mini_map_p2 = (None, None)
         self.color = color
+        self.center3d = ()
         for point in points:
             if self.mini_map_p1 is None or point[3] < self.mini_map_p1[1]:
                 self.mini_map_p1 = (point[0], point[3])
             if self.mini_map_p2 is None or point[3] > self.mini_map_p1[1]:
                 self.mini_map_p2 = (point[0], point[3])
             centre = (centre[0] + point[0], centre[1] + point[1], centre[2] + point[2], centre[3] + point[3])
-        centre = (centre[0] / len(points), centre[1] / len(points), centre[2] / len(points), centre[3] / len(points))
+        self.center = (centre[0] / len(points), centre[1] / len(points), centre[2] / len(points), centre[3] / len(points))
         if tetrahedrons is None:
             self.tetrahedrons = ()
             for face in faces:
@@ -269,7 +277,8 @@ class Model4dv2:
             points = tetrahedron.spaceinter(cam.visible_space)
             for i in range(len(points)-1, -1, -1):
                 if points[i] == (): points.pop(i)
-                else: points[i] = points[i][0]
+                else:
+                    points[i] = points[i][0]
             triangles = triangulation(points)
             for triangle in triangles:
                 self.vertices.append(
@@ -280,7 +289,18 @@ class Model4dv2:
                     (triangle[2][0] + cam.pos[0], triangle[2][1] + cam.pos[1], triangle[2][2] + cam.pos[2]))
                 index = len(self.vertices) + v_start
                 faces.append((index - 1, index - 2, index - 3))
-        return self.vertices, faces  # patrice Patrice
+        self.refresh_center3d()
+        return self.vertices, faces
+
+    def refresh_center3d(self):
+        self.center3d = (0, 0, 0)
+        if len(self.vertices) == 0:
+            return None
+        for vertex in self.vertices:
+            self.center3d = add(self.center3d, vertex)
+        self.center3d = (self.center3d[0]/len(self.vertices),
+                         self.center3d[1]/len(self.vertices),
+                         self.center3d[2]/len(self.vertices))
 
     def get_xbox(self):
         # le nom de cette fonction provient d'un jeu de mot avec hitbox
@@ -303,6 +323,9 @@ class Model4dv2:
 
     def get_color(self):
         return self.color
+
+    def get_center(self):
+        return self.center
 
 
 class Hypercube(Model4dv2):  # un model4d spécial: un hyper pavé
@@ -328,22 +351,6 @@ class Hypercube(Model4dv2):  # un model4d spécial: un hyper pavé
         hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(8, 9, 0, 1, 12, 13, 4, 5, hypercube_points)
         hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(4, 5, 6, 7, 12, 13, 14, 15, hypercube_points)
         hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(8, 9, 10, 11, 0, 1, 2, 3, hypercube_points)
-        """hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(2, 0, 3, 1, 6, 4, 7, 5, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(10, 8, 11, 9, 14, 12, 15, 13, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(6, 2, 7, 3, 4, 0, 5, 1, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(14, 10, 15, 11, 12, 8, 13, 9, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(14, 6, 15, 7, 12, 4, 13, 5, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(10, 2, 11, 3, 8, 0, 9, 1, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(12, 4, 14, 6, 13, 5, 15, 7, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(8, 0, 10, 2, 9, 1, 11, 3, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(8, 0, 12, 4, 9, 1, 13, 5, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(10, 2, 14, 6, 11, 3, 15, 7, hypercube_points)"""
-        """hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(1, 3, 9, 11, 5, 7, 13, 15, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(0, 2, 8, 10, 4, 6, 12, 14, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(0, 1, 2, 3, 8, 9, 10, 11, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(13, 12, 15, 14, 5, 4, 7, 6, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(8, 0, 9, 1, 12, 4, 13, 5, hypercube_points)
-        hypercube_tetrahedrons += self.cube_tetrahedrons_optimised(7, 6, 3, 2, 15, 14, 11, 10,hypercube_points)"""
         Model4dv2.__init__(self, hypercube_points, hypercube_faces, col, hypercube_tetrahedrons)
 
     @staticmethod
@@ -356,7 +363,7 @@ class Hypercube(Model4dv2):  # un model4d spécial: un hyper pavé
         centre = (0, 0, 0, 0)
         for elt in (p1, p2, p3, p4, p5, p6, p7, p8):
             centre = (centre[0]+points_pos[elt][0], centre[1]+points_pos[elt][1], centre[2]+points_pos[elt][2],
-                    centre[3]+points_pos[elt][3])
+                      centre[3]+points_pos[elt][3])
         centre = (centre[0]/8, centre[1]/8, centre[2]/8, centre[3]/8)
         tetrahedrons = ()
         for face in faces:
@@ -422,7 +429,7 @@ class Line:
         self.point2 = point2
         self.vecdir = (point2[0] - point1[0], point2[1] - point1[1], point2[2] - point1[2], point2[3] - point1[3])
 
-    def spaceinter(self, space):
+    def spaceinter(self, space, segment=True):
         # point d'intersection entre un espace et le segment
         denom = self.vecdir[0] * space.normal[0] + self.vecdir[1] * space.normal[1] + self.vecdir[2] * space.normal[2] + \
                 self.vecdir[3] * space.normal[3]
@@ -431,7 +438,7 @@ class Line:
                   3]
         if denom != 0 and num != 0:
             k = num / denom
-            if 0 <= k <= 1:
+            if 0 <= k <= 1 or not segment:
                 return ((self.point1[0] + self.vecdir[0] * k, self.point1[1] + self.vecdir[1] * k,
                          self.point1[2] + self.vecdir[2] * k, self.point1[3] + self.vecdir[3] * k),)
         elif denom == num == 0:
@@ -542,60 +549,7 @@ class Controller:
         self.light_dir = normalise((1, 1, 0))
         self.vertices = []
         self.faces = []
-        # Servaient dans des anciennes versions
-        #points1 = [(-1, -1, -1), (1, -1, -1), (-1, 1, -1), (1, 1, -1), (-1, -1, 1), (1, -1, 1), (-1, 1, 1), (1, 1, 1)]
-        #points2 = [(0, 0, 0), (1, 0, 0), (0.5, 1, 0.5), (0.5, 1, 0.5), (0, 0, 1), (1, 0, 1), (0.5, 1, 0.5),
-        #           (0.5, 1, 0.5)]
-        #points3 = [(elt[0] * 5, elt[1] * 5, elt[2] * 5) for elt in points1]
-        #s75 = sqrt(0.75)
-        #sjsp = sqrt(1 - (0.5 * s75) ** 2)
-        #alpha = 0.4 * pi
-        #off = 0.2 * pi  # offset
-        #ico = [(0, -s75, 0),
-        #       (sjsp, -0.5 * s75, 0), (cos(alpha) * sjsp, -0.5 * s75, sin(alpha) * sjsp),
-        #       (cos(2 * alpha) * sjsp, -0.5 * s75, sin(2 * alpha) * sjsp),
-        #       (cos(3 * alpha) * sjsp, -0.5 * s75, sin(3 * alpha) * sjsp),
-        #       (cos(4 * alpha) * sjsp, -0.5 * s75, sin(4 * alpha) * sjsp),
-        #       (cos(off) * sjsp, 0.5 * s75, sin(off) * sjsp),
-        #       (cos(alpha + off) * sjsp, 0.5 * s75, sin(alpha + off) * sjsp),
-        #       (cos(2 * alpha + off) * sjsp, 0.5 * s75, sin(2 * alpha + off) * sjsp),
-        #       (cos(3 * alpha + off) * sjsp, 0.5 * s75, sin(3 * alpha + off) * sjsp),
-        #       (cos(4 * alpha + off) * sjsp, 0.5 * s75, sin(4 * alpha + off) * sjsp),
-        #       (0, s75, 0)]
-        #icofaces = [(0, 1, 2), (0, 2, 3), (0, 3, 4), (0, 4, 5), (0, 5, 1),
-        #            (1, 6, 2), (2, 6, 7), (2, 7, 3), (3, 7, 8), (3, 8, 4), (4, 8, 9), (4, 9, 5), (5, 9, 10), (5, 10, 1),
-        #            (1, 10, 6),
-        #            (6, 11, 7), (7, 11, 8), (8, 11, 9), (9, 11, 10), (10, 11, 6)]
-        #rads = pi / 1
-        #ws = (-5, 5)
-        #faces = [(1, 2, 0), (3, 2, 1), (5, 3, 1), (7, 3, 5), (5, 0, 4), (1, 0, 5), (4, 7, 5), (6, 7, 4),
-        #         (0, 6, 4), (2, 6, 0), (3, 6, 2), (7, 6, 3)]
-        #hypercube_points = [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (1, 1, 0, 0), (0, 0, 1, 0), (1, 0, 1, 0),
-        #                    (0, 1, 1, 0), (1, 1, 1, 0), (0, 0, 0, 1), (1, 0, 0, 1), (0, 1, 0, 1), (1, 1, 0, 1),
-        #                    (0, 0, 1, 1), (1, 0, 1, 1), (0, 1, 1, 1), (1, 1, 1, 1)]
-        #hypercube_faces = [(0, 1, 2), (3, 2, 1), (3, 1, 5), (7, 3, 5), (0, 4, 5), (1, 0, 5), (6, 4, 0), (2, 6, 0),
-        #                   (7, 5, 4), (6, 7, 4), (6, 2, 3), (7, 6, 3),
-        #                   (10, 8, 9), (11, 10, 9), (11, 9, 13), (15, 11, 13), (8, 12, 13), (9, 8, 13), (14, 12, 8),
-        #                   (10, 14, 8), (15, 13, 12), (14, 15, 12), (14, 10, 11), (15, 14, 11),
-        #                   (10, 2, 3), (11, 10, 3), (0, 8, 9), (1, 0, 9), (14, 6, 2), (10, 14, 2), (0, 4, 8),
-        #                   (2, 3, 7), (15, 2, 7), (1, 9, 13), (5, 1, 13), (15, 7, 6), (14, 15, 6), (5, 13, 12),
-        #                   (4, 5, 12)]
-        #self.objects.append(Model4dv2(hypercube_points, hypercube_faces))
-        self.objects.append(Hypercube((0, 0, 0, 0), (1, 1, 1, 1), (255, 255, 255)))
-        # self.objects.append(Model4d(icofaces, ws, vertices1=ico, color=(100, 0, 185), position=(5, 0, 0)))
-        # self.objects.append(Model4d(faces, ws, vertices1=points1, vertices2=points3, color=(100, 0, 185), position=(0, 0, 10)))
-        # self.objects.append(Model4d(faces, ws, vertices1=points1, rh=-2, rv=0, color=(100, 0, 185), position=(-1, 0, 0)))
-        '''self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(2, 1, 5)))
-        self.objects.append(Model4d(faces, ws, vertices1=points1, rh=1, rv=0, color=(100, 0, 185), position=(3, 0.5, 7)))
-        self.objects.append(Model4d(faces, ws, vertices1=points1, color=(0, 0, 185), position=(-11, 0, 3.5)))
-        self.objects.append(Model4d([(0, 1, 2), (2, 1, 0)], (-10, 10), vertices1=[points1[1], points1[0], points1[2]],))'''
-        # self.objects.append(Model4d.fromobj("Rat.obj", ws, rh=2, position=(0,-0.9,0)))
-        '''points1 = [(0, 0, 0), (0.1, 0, 0), (0, 0.1, 0), (0.1, 0.1, 0), (0, 0, 0.1), (0.1, 0, 0.1), (0, 0.1, 0.1), (0.1, 0.1, 0.1)]
-        from cubes2 import a
-        cubesarray = a()
-        for elt in cubesarray:
-            self.objects.append(Model4d(faces, ws, vertices1=points1, color=(elt[3],elt[4],elt[5]), position=(elt[0],elt[1],elt[2])))
-        '''
+        self.objects.append(Hypercube((0, 0, 0, 0), (1, 1, 1, 2), (255, 10, 10)))
 
     def create_hypercube(self):
         x = int(random()*10)
@@ -754,52 +708,62 @@ class Controller:
                 actual_obj += 1
             face = self.faces[i]
             points_temp = [self.vertices[face[0]], self.vertices[face[1]], self.vertices[face[2]]]
+            normal = normalise(normal_p_3d(points_temp[0], points_temp[1], points_temp[2]))
+            center2face = (points_temp[0][0] - self.objects[actual_obj].center3d[0],
+                           points_temp[0][1] - self.objects[actual_obj].center3d[1],
+                           points_temp[0][2] - self.objects[actual_obj].center3d[2])
+            if dot_product(normal, center2face) < 0:
+                normal = (-normal[0], -normal[1], -normal[2])
+                points_temp[0], points_temp[1] = points_temp[1], points_temp[0]
+            #if dot_product(camera.dir, normal) > 0:
+            #    continue
             projected = [self.projection(points_temp[0], camera),
                          self.projection(points_temp[1], camera),
                          self.projection(points_temp[2], camera)]
-            normal = normalise(normal_p_3d(projected[1], projected[0], projected[2]))
+            normal = normalise(normal_p_3d(projected[0], projected[1], projected[2]))
             normal2 = normalise(normal_p_3d(points_temp[0], points_temp[1], points_temp[2]))
-            luminosity = (dot_product(normal2, self.light_dir) + 1) / 2
-            if True:  #normal[2] <= 0:
-                triangles = self.splitting(points_temp, near_point, direction)
-                tr_temp = ()
-                for elt in triangles:
-                    tr_temp += self.splitting(elt, far_point, (-direction[0], -direction[1], -direction[2]))
-                triangles = tr_temp
-                tr_temp = ()
-                for elt in triangles:
-                    tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), left_fov)
-                triangles = tr_temp
-                tr_temp = ()
-                for elt in triangles:
-                    tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), right_fov)
-                triangles = tr_temp
-                tr_temp = ()
-                for elt in triangles:
-                    tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), up_fov)
-                triangles = tr_temp
-                tr_temp = ()
-                for elt in triangles:
-                    tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), down_fov)
-                triangles = tr_temp
-                for elt in triangles:
-                    projected = [self.projection(elt[0], camera),
-                                 self.projection(elt[1], camera),
-                                 self.projection(elt[2], camera)]
-                    points = ()
-                    for o in range(len(face)):
-                        points += ((int((projected[o][0] + 1) * self.screen_size[0] / 2),
-                                       int((projected[o][1] + 1) * self.screen_size[1] / 2)),)
-                    if points[0] == points[1] or points[1] == points[2] or points[2] == points[0]:
-                        continue
-                    d1 = (camera.pos[0] - elt[0][0]) ** 2 + (camera.pos[1] - elt[0][1]) ** 2 + \
-                         (camera.pos[2] - elt[0][2]) ** 2
-                    d2 = (camera.pos[0] - elt[1][0]) ** 2 + (camera.pos[1] - elt[1][1]) ** 2 + \
-                         (camera.pos[2] - elt[1][2]) ** 2
-                    d3 = (camera.pos[0] - elt[2][0]) ** 2 + (camera.pos[1] - elt[2][1]) ** 2 + \
-                         (camera.pos[2] - elt[2][2]) ** 2
-                    faces.append((points, luminosity, self.objects[actual_obj]))
-                    distances[faces[-1]] = moy((d1, d2, d3))
+            luminosity = (-dot_product(normal2, self.light_dir) + 1) / 2
+            #if not normal[2] < 0:
+            #    continue
+            triangles = self.splitting(points_temp, near_point, direction)
+            tr_temp = ()
+            for elt in triangles:
+                tr_temp += self.splitting(elt, far_point, (-direction[0], -direction[1], -direction[2]))
+            triangles = tr_temp
+            tr_temp = ()
+            for elt in triangles:
+                tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), left_fov)
+            triangles = tr_temp
+            tr_temp = ()
+            for elt in triangles:
+                tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), right_fov)
+            triangles = tr_temp
+            tr_temp = ()
+            for elt in triangles:
+                tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), up_fov)
+            triangles = tr_temp
+            tr_temp = ()
+            for elt in triangles:
+                tr_temp += self.splitting(elt, (camera.pos[0], camera.pos[1], camera.pos[2]), down_fov)
+            triangles = tr_temp
+            for elt in triangles:
+                projected = [self.projection(elt[0], camera),
+                             self.projection(elt[1], camera),
+                             self.projection(elt[2], camera)]
+                points = ()
+                for o in range(len(face)):
+                    points += ((int((projected[o][0] + 1) * self.screen_size[0] / 2),
+                                   int((projected[o][1] + 1) * self.screen_size[1] / 2)),)
+                if points[0] == points[1] or points[1] == points[2] or points[2] == points[0]:
+                    continue
+                d1 = (camera.pos[0] - elt[0][0]) ** 2 + (camera.pos[1] - elt[0][1]) ** 2 + \
+                     (camera.pos[2] - elt[0][2]) ** 2
+                d2 = (camera.pos[0] - elt[1][0]) ** 2 + (camera.pos[1] - elt[1][1]) ** 2 + \
+                     (camera.pos[2] - elt[1][2]) ** 2
+                d3 = (camera.pos[0] - elt[2][0]) ** 2 + (camera.pos[1] - elt[2][1]) ** 2 + \
+                     (camera.pos[2] - elt[2][2]) ** 2
+                faces.append((points, luminosity, self.objects[actual_obj]))
+                distances[faces[-1]] = moy((d1, d2, d3))
         # sorted_faces = faces
         """
         for _ in range(len(faces)):
@@ -873,7 +837,7 @@ exist_gravity = False
 force_y = 0
 w_angle = 0
 w_rotation = False
-right = left = up = down = pu = pd = False
+right = left = up = down = pu = pd = fd_left = fd_right = False
 f7 = False
 c_up = False
 clicks = (False, False, False)
@@ -889,7 +853,7 @@ while end:
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_RIGHT or event.key == pg.K_d:
                 right = True
-            elif event.key == pg.K_LEFT or event.key == pg.K_q or event.key == pg.K_a:
+            elif event.key == pg.K_LEFT or event.key == pg.K_q:
                 left = True
             elif event.key == pg.K_UP or event.key == pg.K_z or event.key == pg.K_w:
                 up = True
@@ -899,6 +863,10 @@ while end:
                 pu = True
             elif event.key == pg.K_PAGEDOWN or event.key == pg.K_LSHIFT:
                 pd = True
+            elif event.key == pg.K_a:
+                fd_left = True
+            elif event.key == pg.K_e:
+                fd_right = True
             elif event.key == pg.K_ESCAPE:
                 pg.mouse.set_visible(True)
                 pg.event.set_grab(False)
@@ -919,6 +887,10 @@ while end:
                 pu = False
             elif event.key == pg.K_PAGEDOWN or event.key == pg.K_LSHIFT:
                 pd = False
+            elif event.key == pg.K_a:
+                fd_left = False
+            elif event.key == pg.K_e:
+                fd_right = False
             elif event.key == pg.K_F3:
                 controller.set_debug()
             elif event.key == pg.K_F5:
